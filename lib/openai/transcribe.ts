@@ -27,8 +27,14 @@ export async function transcribeAudio(
     
     console.log(`Transcribing audio: ${fileToUpload}, size: ${audioBuffer.length} bytes, type: ${contentType}`)
     
-    // Convert buffer to File-like object for OpenAI
-    const file = new File([audioBuffer], fileToUpload, { type: contentType })
+    // Convert Buffer to ArrayBuffer (required for File constructor)
+    const arrayBuffer = audioBuffer.buffer.slice(
+      audioBuffer.byteOffset,
+      audioBuffer.byteOffset + audioBuffer.byteLength
+    )
+    
+    // Convert to File-like object for OpenAI
+    const file = new File([arrayBuffer], fileToUpload, { type: contentType })
     
     // Call OpenAI Whisper API
     const transcription = await openai.audio.transcriptions.create({
