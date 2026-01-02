@@ -1,26 +1,167 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Soft neutral base */
+  --background: #FAFAF8;
+  --foreground: #2A2A2A;
+  
+  /* Warm peach/orange accent */
+  --accent-primary: #F4B183;
+  --accent-primary-hover: #F6C19A;
+  
+  /* Secondary accents */
+  --accent-yellow: #F9D98C;
+  --accent-green: #B8E6B8;
+  --accent-blue: #A8D8EA;
+  
+  /* Grays */
+  --gray-50: #F8F7F5;
+  --gray-100: #F0EEE9;
+  --gray-200: #E5E2DB;
+  --gray-300: #CCC9C0;
+  --gray-400: #A8A59C;
+  --gray-500: #8A8A8A;
+  --gray-600: #6B6B6B;
+  --gray-700: #4A4A4A;
+  --gray-800: #2A2A2A;
+  --gray-900: #1F1F1F;
+  
+  /* Card and surface colors */
+  --card-bg: #FFFFFF;
+  --card-shadow: rgba(0, 0, 0, 0.04);
+  --card-border: rgba(0, 0, 0, 0.06);
 }
 
 @theme inline {
+  /* Colors */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  
+  --color-primary: var(--accent-primary);
+  --color-primary-hover: var(--accent-primary-hover);
+  
+  --color-accent-yellow: var(--accent-yellow);
+  --color-accent-green: var(--accent-green);
+  --color-accent-blue: var(--accent-blue);
+  
+  --color-gray-50: var(--gray-50);
+  --color-gray-100: var(--gray-100);
+  --color-gray-200: var(--gray-200);
+  --color-gray-300: var(--gray-300);
+  --color-gray-400: var(--gray-400);
+  --color-gray-500: var(--gray-500);
+  --color-gray-600: var(--gray-600);
+  --color-gray-700: var(--gray-700);
+  --color-gray-800: var(--gray-800);
+  --color-gray-900: var(--gray-900);
+  
+  --color-card: var(--card-bg);
+  
+  /* Typography - Using system fonts with Inter-like characteristics */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 3px var(--card-shadow);
+  --shadow-md: 0 4px 12px var(--card-shadow);
+  --shadow-lg: 0 8px 24px var(--card-shadow);
+  
+  /* Border radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Smooth transitions for interactive elements */
+button, a, input, textarea {
+  transition: all 150ms ease-in-out;
+}
+
+/* Focus styles */
+*:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Toast animation */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* Smooth horizontal scroll with snap for Kanban columns */
+@media (max-width: 1023px) {
+  .kanban-scroll-container {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--gray-300) transparent;
+  }
+
+  .kanban-scroll-container::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .kanban-scroll-container::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .kanban-scroll-container::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: 3px;
+  }
+
+  .kanban-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-400);
+  }
+}
+
+/* Improve touch target sizes on mobile */
+@media (max-width: 768px) {
+  button, a[role="button"], input[type="checkbox"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Prevent text size adjustment on iOS */
+  body {
+    -webkit-text-size-adjust: 100%;
+  }
+}
+
+/* Safe area insets for devices with notches */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 1rem);
+}
+
+/* Ensure viewport handles safe areas */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
 }
