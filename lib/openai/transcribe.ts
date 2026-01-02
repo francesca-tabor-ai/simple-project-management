@@ -27,8 +27,10 @@ export async function transcribeAudio(
     
     console.log(`Transcribing audio: ${fileToUpload}, size: ${audioBuffer.length} bytes, type: ${contentType}`)
     
-    // Convert Buffer to Uint8Array (required for File constructor)
-    const file = new File([new Uint8Array(audioBuffer)], fileToUpload, { type: contentType })
+    // Convert Buffer -> Uint8Array backed by a real ArrayBuffer (avoids SharedArrayBuffer typing issues)
+    const bytes = Uint8Array.from(audioBuffer)
+    
+    const file = new File([bytes], fileToUpload, { type: contentType })
     
     // Call OpenAI Whisper API
     const transcription = await openai.audio.transcriptions.create({
