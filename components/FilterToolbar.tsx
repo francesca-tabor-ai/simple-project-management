@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { type Task } from '@/lib/task-types'
-import { type FiltersState, type DuePreset, getUniqueLabels, getUniqueAssignees } from '@/lib/filters'
+import { type FiltersState, type DuePreset, getUniqueLabels, getUniqueAssignees, DEFAULT_FILTERS, countActiveFilters } from '@/lib/filters'
 import LabelChip from './LabelChip'
 
 interface FilterToolbarProps {
@@ -31,6 +31,7 @@ export default function FilterToolbar({ filters, tasks, onFiltersChange }: Filte
   const [searchValue, setSearchValue] = useState(filters.query)
   const [isLabelMenuOpen, setIsLabelMenuOpen] = useState(false)
   const [isPriorityMenuOpen, setIsPriorityMenuOpen] = useState(false)
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false)
   const labelMenuRef = useRef<HTMLDivElement>(null)
   const priorityMenuRef = useRef<HTMLDivElement>(null)
 
@@ -38,6 +39,7 @@ export default function FilterToolbar({ filters, tasks, onFiltersChange }: Filte
   const uniqueAssignees = getUniqueAssignees(tasks)
   const hasUnassignedTasks = tasks.some(t => !t.assignee)
   const hasUnlabeledTasks = tasks.some(t => t.labels.length === 0)
+  const activeFilterCount = countActiveFilters(filters)
 
   // Debounced search (400ms)
   useEffect(() => {
@@ -78,19 +80,48 @@ export default function FilterToolbar({ filters, tasks, onFiltersChange }: Filte
   }
 
   return (
-    <div className="bg-white rounded-[16px] border-2 border-gray-200 p-3 md:p-4 mb-6">
-      <div className="flex flex-wrap gap-2 md:gap-3 items-stretch">
+    <div className="bg-white rounded-[16px] border-2 border-gray-200 mb-6">
+      {/* Top bar: Search + Filters Button */}
+      <div className="p-3 md:p-4 flex gap-3 items-center">
         {/* Search Input */}
-        <div className="flex-1 min-w-full md:min-w-[200px]">
+        <div className="flex-1">
           <input
             type="text"
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             placeholder="Search tasks..."
-            className="w-full px-3 md:px-4 py-2 bg-gray-50 border-2 border-gray-200 rounded-[12px] text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-primary transition-all min-h-[44px]"
+            className="w-full px-4 py-2.5 bg-gray-50 border-2 border-gray-200 rounded-[12px] text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-primary transition-all"
             aria-label="Search tasks by title or description"
           />
         </div>
+
+        {/* Filters Toggle Button */}
+        <button
+          onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
+          className={`px-4 py-2.5 rounded-[12px] text-sm font-medium transition-all flex items-center gap-2 ${
+            activeFilterCount > 0
+              ? 'bg-primary text-white hover:bg-primary-hover'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+          aria-expanded={isFilterPanelOpen}
+          aria-label={`Filters${activeFilterCount > 0 ? ` (${activeFilterCount} active)` : ''}`}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+          </svg>
+          <span>Filters</span>
+          {activeFilterCount > 0 && (
+            <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-semibold">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Collapsible Filter Panel */}
+      {isFilterPanelOpen && (
+        <div className="border-t-2 border-gray-200 p-3 md:p-4 bg-gray-50/50">
+          <div className="flex flex-wrap gap-2 md:gap-3 items-stretch">
 
         {/* Label Filter (Multi-select) */}
         <div className="relative flex-1 md:flex-initial" ref={labelMenuRef}>
@@ -221,7 +252,9 @@ export default function FilterToolbar({ filters, tasks, onFiltersChange }: Filte
             </div>
           )}
         </div>
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

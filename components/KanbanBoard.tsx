@@ -351,6 +351,7 @@ export default function KanbanBoard({ initialTasks }: KanbanBoardProps) {
               canRedo={canRedo}
               onUndo={undo}
               onRedo={redo}
+              lastAction={lastAction}
             />
           </div>
         </div>

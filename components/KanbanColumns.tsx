@@ -125,12 +125,12 @@ export default function KanbanColumns({
                   draggable={!isEditing && !isSelectionMode}
                   onDragStart={(e) => onDragStart(task.id, e)}
                   onClick={(e) => onTaskClick(task.id, e)}
-                  className={`bg-card p-4 rounded-[14px] shadow-sm border-2 transition-all duration-200 group ${
+                  className={`bg-card p-5 rounded-[14px] shadow-sm border-2 transition-all duration-200 group ${
                     isSelected 
                       ? 'border-primary bg-primary/5' 
                       : 'border-gray-200/50'
                   } ${
-                    !isEditing ? 'cursor-pointer hover:shadow-md hover:scale-[1.02]' : ''
+                    !isEditing ? 'cursor-pointer hover:shadow-md hover:scale-[1.01]' : ''
                   }`}
                 >
                   <div className="task-card-content space-y-3">
@@ -166,7 +166,7 @@ export default function KanbanColumns({
                       ) : (
                         <p
                           onClick={(e) => onStartEditTitle(task, e)}
-                          className="text-sm text-gray-800 flex-1 leading-relaxed font-medium hover:text-primary transition-colors cursor-text"
+                          className="text-sm text-gray-900 flex-1 leading-relaxed font-semibold hover:text-primary transition-colors cursor-text"
                           title="Click to edit"
                         >
                           {task.title}
@@ -252,8 +252,22 @@ export default function KanbanColumns({
             })}
             
             {tasksByStatus[status].length === 0 && (
-              <div className="text-center py-12 text-gray-400 text-sm">
-                No tasks yet
+              <div className="text-center py-16 px-4">
+                <div className="text-4xl mb-3">
+                  {status === 'pending' && '📝'}
+                  {status === 'in_progress' && '⚡'}
+                  {status === 'done' && '🎉'}
+                </div>
+                <p className="text-gray-500 text-sm font-medium mb-1">
+                  {status === 'pending' && 'No tasks yet'}
+                  {status === 'in_progress' && 'Nothing in progress'}
+                  {status === 'done' && 'All clear!'}
+                </p>
+                <p className="text-gray-400 text-xs">
+                  {status === 'pending' && 'Add a task to get started'}
+                  {status === 'in_progress' && 'Move a task here to begin'}
+                  {status === 'done' && 'Great work completing everything'}
+                </p>
               </div>
             )}
           </div>
