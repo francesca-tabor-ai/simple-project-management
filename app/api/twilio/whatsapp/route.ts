@@ -6,6 +6,9 @@ import { extractTaskFromTranscript, createTaskFromText } from '@/lib/openai/extr
 import { createTaskFromInbound, getTaskDeepLink } from '@/lib/tasks/createTaskFromInbound'
 import { env, features } from '@/lib/env'
 
+// Force Node.js runtime (required for Buffer/stream operations)
+export const runtime = 'nodejs'
+
 // Check if WhatsApp feature is enabled
 if (!features.whatsappVoice) {
   console.warn('⚠️  WhatsApp voice feature is disabled. Missing required environment variables.')
