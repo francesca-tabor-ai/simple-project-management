@@ -318,7 +318,7 @@ export default function TaskDetailsDrawer({ task, onClose, onTaskUpdate }: TaskD
       // Notify parent to refresh
       if (onTaskUpdate) {
         const updatedTask = { ...localTask, labels: [...localTask.labels, newLabelObj] }
-        onTaskUpdate(updatedTask, { isUserAction: true })
+        onTaskUpdate(updatedTask, { type: 'edit', description: 'Added label' })
       }
       
       setNewLabel('')
@@ -348,7 +348,7 @@ export default function TaskDetailsDrawer({ task, onClose, onTaskUpdate }: TaskD
       // Notify parent to refresh
       if (onTaskUpdate) {
         const updatedTask = { ...localTask, labels: localTask.labels.filter(l => l.id !== labelId) }
-        onTaskUpdate(updatedTask, { isUserAction: true })
+        onTaskUpdate(updatedTask, { type: 'edit', description: 'Removed label' })
       }
     } catch (error) {
       console.error('[TaskDetailsDrawer] Failed to remove label:', error)
@@ -380,7 +380,7 @@ export default function TaskDetailsDrawer({ task, onClose, onTaskUpdate }: TaskD
             label.id === labelId ? { ...label, color } : label
           )
         }
-        onTaskUpdate(updatedTask, { isUserAction: true })
+        onTaskUpdate(updatedTask, { type: 'edit', description: 'Changed label color' })
       }
     } catch (error) {
       console.error('[TaskDetailsDrawer] Failed to update label color:', error)
