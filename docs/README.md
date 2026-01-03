@@ -58,11 +58,17 @@ Welcome to the Tasks Kanban App documentation! This folder contains comprehensiv
    - Undo toast notifications
    - State restoration
 
+9. **[Checklist Persistence](./CHECKLIST_PERSISTENCE.md)**
+   - Database storage (JSONB)
+   - Auto-save implementation
+   - Testing guide
+   - Troubleshooting
+
 ---
 
 ### Advanced Features
 
-9. **[Search & Filters](./SEARCH_FILTERS.md)**
+10. **[Search & Filters](./SEARCH_FILTERS.md)**
    - Full-text search
    - Label filters
    - Assignee filters
@@ -70,13 +76,13 @@ Welcome to the Tasks Kanban App documentation! This folder contains comprehensiv
    - Priority filters
    - Active filter chips
 
-10. **[Swimlanes](./SWIMLANES.md)**
+11. **[Swimlanes](./SWIMLANES.md)**
     - Group by Assignee
     - Group by Priority
     - Group by Label
     - Lane management
 
-11. **[Mobile Responsive](./MOBILE_RESPONSIVE.md)**
+12. **[Mobile Responsive](./MOBILE_RESPONSIVE.md)**
     - Horizontal scrolling columns
     - Touch-optimized UI
     - Responsive toolbar
@@ -87,27 +93,27 @@ Welcome to the Tasks Kanban App documentation! This folder contains comprehensiv
 
 ### Integrations
 
-12. **[Google Calendar Integration](./GOOGLE_CALENDAR_SETUP.md)**
+13. **[Google Calendar Integration](./GOOGLE_CALENDAR_SETUP.md)**
     - OAuth setup
     - Event synchronization
     - Calendar selection
     - Auto-update on task changes
     - Setup guide
 
-13. **[Google Calendar Implementation](./IMPLEMENTATION_SUMMARY.md)**
+14. **[Google Calendar Implementation](./IMPLEMENTATION_SUMMARY.md)**
     - Technical details
     - Architecture overview
     - API reference
     - Security implementation
 
-14. **[WhatsApp Voice-to-Task](./WHATSAPP_VOICE_SETUP.md)**
+15. **[WhatsApp Voice-to-Task](./WHATSAPP_VOICE_SETUP.md)**
     - Twilio setup
     - OpenAI transcription
     - Task extraction
     - Webhook configuration
     - Testing guide
 
-15. **[WhatsApp Implementation](./WHATSAPP_IMPLEMENTATION_SUMMARY.md)**
+16. **[WhatsApp Implementation](./WHATSAPP_IMPLEMENTATION_SUMMARY.md)**
     - Technical overview
     - Cost estimates
     - Security features
