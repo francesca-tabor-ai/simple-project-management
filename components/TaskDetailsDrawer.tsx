@@ -10,6 +10,11 @@ import {
   deleteChecklistItem,
   type ChecklistItem 
 } from '@/app/actions/checklist'
+import { 
+  addLabelToTask, 
+  removeLabelFromTask, 
+  updateLabelColor 
+} from '@/app/actions/labels'
 import { type ActionMeta } from '@/hooks/useUndoableState'
 import { useAutosave } from '@/hooks/useAutosave'
 import { useCalendarSync } from '@/hooks/useCalendarSync'
@@ -275,7 +280,7 @@ export default function TaskDetailsDrawer({ task, onClose, onTaskUpdate }: TaskD
     }
   }
 
-  const handleAddLabel = () => {
+  const handleAddLabel = async () => {
     const trimmed = normalizeLabelName(newLabel)
     if (!trimmed) {
       setLabelError('Label cannot be empty')
@@ -290,27 +295,100 @@ export default function TaskDetailsDrawer({ task, onClose, onTaskUpdate }: TaskD
       return
     }
     
-    // Create new label with color
-    const color = newLabelColor || getColorForLabel(trimmed)
-    const newLabelObj = makeLabel(trimmed, color)
-    
-    handleUpdate({ labels: [...localTask.labels, newLabelObj] })
-    setNewLabel('')
-    setNewLabelColor('')
-    setShowColorPicker(false)
-    setLabelError('')
+    try {
+      // Create new label with color
+      const color = newLabelColor || getColorForLabel(trimmed)
+      
+      // Optimistically update UI
+      const tempLabel = makeLabel(trimmed, color)
+      setLocalTask(prev => ({
+        ...prev!,
+        labels: [...prev!.labels, tempLabel]
+      }))
+      
+      // Persist to database
+      const newLabelObj = await addLabelToTask(localTask.id, trimmed, color)
+      
+      // Update with real label from DB
+      setLocalTask(prev => ({
+        ...prev!,
+        labels: [...prev!.labels.filter(l => l.id !== tempLabel.id), newLabelObj]
+      }))
+      
+      // Notify parent to refresh
+      if (onTaskUpdate) {
+        const updatedTask = { ...localTask, labels: [...localTask.labels, newLabelObj] }
+        onTaskUpdate(updatedTask, { isUserAction: true })
+      }
+      
+      setNewLabel('')
+      setNewLabelColor('')
+      setShowColorPicker(false)
+      setLabelError('')
+    } catch (error) {
+      console.error('[TaskDetailsDrawer] Failed to add label:', error)
+      // Revert optimistic update
+      setLocalTask(task)
+      alert('Failed to add label. Please try again.')
+    }
   }
 
-  const handleRemoveLabel = (labelId: string) => {
-    handleUpdate({ labels: localTask.labels.filter(l => l.id !== labelId) })
+  const handleRemoveLabel = async (labelId: string) => {
+    try {
+      // Optimistically update UI
+      const labelToRemove = localTask.labels.find(l => l.id === labelId)
+      setLocalTask(prev => ({
+        ...prev!,
+        labels: prev!.labels.filter(l => l.id !== labelId)
+      }))
+      
+      // Persist to database
+      await removeLabelFromTask(localTask.id, labelId)
+      
+      // Notify parent to refresh
+      if (onTaskUpdate) {
+        const updatedTask = { ...localTask, labels: localTask.labels.filter(l => l.id !== labelId) }
+        onTaskUpdate(updatedTask, { isUserAction: true })
+      }
+    } catch (error) {
+      console.error('[TaskDetailsDrawer] Failed to remove label:', error)
+      // Revert optimistic update
+      setLocalTask(task)
+      alert('Failed to remove label. Please try again.')
+    }
   }
   
-  const handleChangeLabelColor = (labelId: string, color: string) => {
-    const updatedLabels = localTask.labels.map(label =>
-      label.id === labelId ? { ...label, color } : label
-    )
-    handleUpdate({ labels: updatedLabels })
-    setEditingLabelId(null)
+  const handleChangeLabelColor = async (labelId: string, color: string) => {
+    try {
+      // Optimistically update UI
+      setLocalTask(prev => ({
+        ...prev!,
+        labels: prev!.labels.map(label =>
+          label.id === labelId ? { ...label, color } : label
+        )
+      }))
+      setEditingLabelId(null)
+      
+      // Persist to database
+      await updateLabelColor(labelId, color)
+      
+      // Notify parent to refresh
+      if (onTaskUpdate) {
+        const updatedTask = {
+          ...localTask,
+          labels: localTask.labels.map(label =>
+            label.id === labelId ? { ...label, color } : label
+          )
+        }
+        onTaskUpdate(updatedTask, { isUserAction: true })
+      }
+    } catch (error) {
+      console.error('[TaskDetailsDrawer] Failed to update label color:', error)
+      // Revert optimistic update
+      setLocalTask(task)
+      setEditingLabelId(null)
+      alert('Failed to update label color. Please try again.')
+    }
   }
 
   const handleAddAttachment = () => {
