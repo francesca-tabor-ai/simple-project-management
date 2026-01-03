@@ -19,6 +19,7 @@ import { type ActionMeta } from '@/hooks/useUndoableState'
 import { useAutosave } from '@/hooks/useAutosave'
 import { useCalendarSync } from '@/hooks/useCalendarSync'
 import { makeLabel, equalsLabel, normalizeLabelName, getColorForLabel } from '@/lib/label-utils'
+import { formatDateForInput } from '@/lib/date-utils'
 import LabelChip from './LabelChip'
 import ColorPicker from './ColorPicker'
 import SaveStatusIndicator from './SaveStatusIndicator'
@@ -523,7 +524,7 @@ export default function TaskDetailsDrawer({ task, onClose, onTaskUpdate }: TaskD
             <div className="flex gap-2">
               <input
                 type="date"
-                value={localTask.dueDate || ''}
+                value={formatDateForInput(localTask.dueDate)}
                 onChange={(e) => handleUpdate({ dueDate: e.target.value || null })}
                 className="flex-1 px-4 py-2 bg-gray-50 border-2 border-gray-200 rounded-[12px] text-gray-800 focus:outline-none focus:border-primary focus:bg-white transition-all"
               />
