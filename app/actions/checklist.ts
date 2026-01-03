@@ -15,6 +15,7 @@ export interface ChecklistItem {
 
 /**
  * Get all checklist items for a task
+ * Falls back to JSONB column if normalized table is empty
  */
 export async function getChecklistItems(taskId: string): Promise<ChecklistItem[]> {
   const supabase = await createClient()
@@ -27,36 +28,70 @@ export async function getChecklistItems(taskId: string): Promise<ChecklistItem[]
 
   console.log('[getChecklistItems] Fetching items for task:', taskId)
 
-  // Verify user owns the task (RLS will enforce this too, but be explicit)
-  const { data: task } = await supabase
-    .from('tasks')
-    .select('id')
-    .eq('id', taskId)
-    .eq('user_id', user.id)
-    .single()
-
-  if (!task) {
-    console.error('[getChecklistItems] Task not found or unauthorized')
-    return []
-  }
-
-  const { data, error } = await supabase
+  // First, try to get from normalized table
+  const { data: items, error: itemsError } = await supabase
     .from('checklist_items')
     .select('id, task_id, text, done, "order", created_at, updated_at')
     .eq('task_id', taskId)
     .order('order', { ascending: true })
 
-  if (error) {
-    console.error('[getChecklistItems] Supabase error:', error)
+  // If table doesn't exist or query fails, fall back to JSONB
+  if (itemsError) {
+    console.warn('[getChecklistItems] Normalized table error, falling back to JSONB:', itemsError.message)
+    
+    // Fall back to JSONB column
+    const { data: task } = await supabase
+      .from('tasks')
+      .select('checklist')
+      .eq('id', taskId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (task?.checklist && Array.isArray(task.checklist)) {
+      console.log('[getChecklistItems] Using JSONB fallback, found', task.checklist.length, 'items')
+      // Convert JSONB format to ChecklistItem format
+      return task.checklist.map((item: any, index: number) => ({
+        id: item.id || crypto.randomUUID(),
+        task_id: taskId,
+        text: item.text || '',
+        done: item.done || false,
+        order: index
+      }))
+    }
+    
     return []
   }
 
-  console.log('[getChecklistItems] Found', data?.length || 0, 'items')
-  return data || []
+  // If normalized table exists but is empty, check JSONB for migration
+  if (!items || items.length === 0) {
+    console.log('[getChecklistItems] Normalized table empty, checking JSONB...')
+    
+    const { data: task } = await supabase
+      .from('tasks')
+      .select('checklist')
+      .eq('id', taskId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (task?.checklist && Array.isArray(task.checklist) && task.checklist.length > 0) {
+      console.log('[getChecklistItems] Found', task.checklist.length, 'items in JSONB, using as fallback')
+      return task.checklist.map((item: any, index: number) => ({
+        id: item.id || crypto.randomUUID(),
+        task_id: taskId,
+        text: item.text || '',
+        done: item.done || false,
+        order: index
+      }))
+    }
+  }
+
+  console.log('[getChecklistItems] Found', items?.length || 0, 'items from normalized table')
+  return items || []
 }
 
 /**
  * Add a new checklist item
+ * Falls back to JSONB if normalized table doesn't exist
  */
 export async function addChecklistItem(taskId: string, text: string): Promise<ChecklistItem | null> {
   const supabase = await createClient()
@@ -69,26 +104,55 @@ export async function addChecklistItem(taskId: string, text: string): Promise<Ch
 
   console.log('[addChecklistItem] Adding item to task:', taskId)
 
-  // Verify user owns the task
-  const { data: task } = await supabase
-    .from('tasks')
-    .select('id')
-    .eq('id', taskId)
-    .eq('user_id', user.id)
-    .single()
-
-  if (!task) {
-    throw new Error('Task not found or unauthorized')
-  }
-
-  // Get the next order value
-  const { data: items } = await supabase
+  // Try normalized table first
+  const { data: items, error: checkError } = await supabase
     .from('checklist_items')
     .select('order')
     .eq('task_id', taskId)
     .order('order', { ascending: false })
     .limit(1)
 
+  // If table doesn't exist, fall back to JSONB
+  if (checkError && checkError.code === '42P01') {
+    console.warn('[addChecklistItem] Normalized table not found, using JSONB fallback')
+    
+    // Get current task
+    const { data: task } = await supabase
+      .from('tasks')
+      .select('checklist')
+      .eq('id', taskId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (!task) {
+      throw new Error('Task not found')
+    }
+
+    const newItem = {
+      id: crypto.randomUUID(),
+      text: text.trim(),
+      done: false
+    }
+
+    const updatedChecklist = [...(task.checklist || []), newItem]
+
+    await supabase
+      .from('tasks')
+      .update({ checklist: updatedChecklist, updated_at: new Date().toISOString() })
+      .eq('id', taskId)
+      .eq('user_id', user.id)
+
+    console.log('[addChecklistItem] Added to JSONB')
+    return {
+      id: newItem.id,
+      task_id: taskId,
+      text: newItem.text,
+      done: newItem.done,
+      order: (task.checklist || []).length
+    }
+  }
+
+  // Use normalized table
   const nextOrder = items && items.length > 0 ? items[0].order + 1 : 0
 
   const { data, error } = await supabase
