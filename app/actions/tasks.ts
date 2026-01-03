@@ -9,19 +9,21 @@ export async function getTasks(): Promise<Task[]> {
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) {
+    console.log('[getTasks] No authenticated user')
     return []
   }
 
   const { data, error } = await supabase
     .from('tasks')
-    .select('*')
+    .select('*') // Includes all columns: checklist, labels, etc.
     .order('created_at', { ascending: false })
 
   if (error) {
-    console.error('Error fetching tasks:', error)
+    console.error('[getTasks] Supabase error:', error)
     return []
   }
 
+  console.log('[getTasks] Fetched', data?.length || 0, 'tasks')
   return data || []
 }
 
@@ -242,8 +244,11 @@ export async function updateTask(taskId: string, updates: Partial<Omit<Task, 'id
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) {
+    console.error('[updateTask] User not authenticated')
     throw new Error('User not authenticated')
   }
+
+  console.log('[updateTask] Updating task:', taskId, 'with fields:', Object.keys(updates))
 
   const { error } = await supabase
     .from('tasks')
@@ -255,10 +260,18 @@ export async function updateTask(taskId: string, updates: Partial<Omit<Task, 'id
     .eq('user_id', user.id) // Ensures user can only update their own tasks
 
   if (error) {
-    console.error('Error updating task:', error)
+    console.error('[updateTask] Supabase error:', {
+      taskId,
+      error: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+      updates: Object.keys(updates)
+    })
     throw new Error(`Failed to update task: ${error.message}`)
   }
 
+  console.log('[updateTask] Successfully updated task:', taskId)
   revalidatePath('/app')
 }
 

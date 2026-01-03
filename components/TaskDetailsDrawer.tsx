@@ -99,10 +99,23 @@ export default function TaskDetailsDrawer({ task, onClose, onTaskUpdate }: TaskD
       
       // Only persist if there are actual changes
       if (Object.keys(updates).length > 0) {
-        await updateTask(task.id, updates as Partial<Task>)
+        console.log('[TaskDetailsDrawer] Saving changes:', Object.keys(updates))
+        try {
+          await updateTask(task.id, updates as Partial<Task>)
+          console.log('[TaskDetailsDrawer] Save successful')
+        } catch (error) {
+          console.error('[TaskDetailsDrawer] Save failed:', error)
+          throw error // Re-throw so useAutosave can handle it
+        }
       }
     },
-    { debounceMs: 400 }
+    { 
+      debounceMs: 400,
+      onError: (error) => {
+        console.error('[TaskDetailsDrawer] Autosave error:', error)
+        // The SaveStatusIndicator will show the error state
+      }
+    }
   )
 
   // Flush autosave on close
@@ -149,26 +162,40 @@ export default function TaskDetailsDrawer({ task, onClose, onTaskUpdate }: TaskD
     }
   }
 
-  const handleAddChecklistItem = () => {
+  const handleAddChecklistItem = async () => {
     if (!newChecklistItem.trim()) return
     const newItem = {
       id: crypto.randomUUID(),
       text: newChecklistItem.trim(),
       done: false,
     }
-    handleUpdate({ checklist: [...localTask.checklist, newItem] })
+    // Immutable update - create new array
+    const updatedChecklist = [...localTask.checklist, newItem]
+    handleUpdate({ checklist: updatedChecklist })
     setNewChecklistItem('')
+    
+    // Flush immediately for discrete checklist actions (don't wait for 400ms debounce)
+    await flushSave()
   }
 
-  const handleToggleChecklistItem = (itemId: string) => {
+  const handleToggleChecklistItem = async (itemId: string) => {
+    // Immutable update - create new array and new item objects
     const updated = localTask.checklist.map(item =>
       item.id === itemId ? { ...item, done: !item.done } : item
     )
     handleUpdate({ checklist: updated })
+    
+    // Flush immediately for discrete actions
+    await flushSave()
   }
 
-  const handleDeleteChecklistItem = (itemId: string) => {
-    handleUpdate({ checklist: localTask.checklist.filter(item => item.id !== itemId) })
+  const handleDeleteChecklistItem = async (itemId: string) => {
+    // Immutable update - create new array via filter
+    const updatedChecklist = localTask.checklist.filter(item => item.id !== itemId)
+    handleUpdate({ checklist: updatedChecklist })
+    
+    // Flush immediately for discrete actions
+    await flushSave()
   }
 
   const handleAddLabel = () => {
