@@ -247,14 +247,83 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## 🗺️ Roadmap
 
-- [ ] Recurring tasks
-- [ ] Task templates
-- [ ] Team collaboration
-- [ ] Activity feed
-- [ ] Export to CSV/PDF
-- [ ] Dark mode
-- [ ] Offline support
-- [ ] Desktop app (Electron)
+### NEXT ACTION
+- [ ] **NEXT:** Deploy to Vercel [auto-deploy working + production live]
+
+### DONE WHEN
+- [ ] **DONE WHEN:** All features deployed, tested in prod, and checklist 100% complete
+
+---
+
+### **SETUP**
+- [ ] **SETUP** *(section header)*
+
+#### Fix Deployment Pipeline
+- [ ] Connect Vercel Git integration [GitHub webhooks firing]
+- [ ] Verify production environment variables [all keys present in Vercel dashboard]
+- [ ] Test auto-deploy [push triggers deployment within 30s]
+
+---
+
+### **BUILD**
+- [ ] **BUILD** *(section header)*
+
+#### Core Features
+- [ ] Build recurring tasks [create + test daily/weekly repeat]
+- [ ] Build task templates [save template + reuse in <3 clicks]
+- [ ] Add dark mode toggle [persists across sessions]
+- [ ] Add CSV/PDF export [downloads all tasks with filters applied]
+
+#### Team Features  
+- [ ] Enable team collaboration [invite users + shared workspace]
+- [ ] Build activity feed [shows last 50 actions with timestamps]
+
+#### Platform
+- [ ] Add offline support [tasks cached + sync on reconnect]
+- [ ] Package desktop app [Electron build for macOS + Windows]
+
+---
+
+### **TEST**
+- [ ] **TEST** *(section header)*
+
+#### Manual Testing
+- [ ] Test recurring tasks [daily task creates tomorrow's copy]
+- [ ] Test templates [create "Meeting Notes" template + use 3x]
+- [ ] Test dark mode [toggle works + no contrast issues]
+- [ ] Test export [CSV opens in Excel + PDF renders correctly]
+
+#### Integration Testing
+- [ ] Test team workspace [invite user + verify shared tasks]
+- [ ] Test activity feed [create/edit/delete shows in feed]
+- [ ] Test offline mode [disconnect WiFi + create task + reconnect]
+
+---
+
+### **PUBLISH**
+- [ ] **PUBLISH** *(section header)*
+
+- [ ] Deploy to production [Vercel build passes + live URL accessible]
+- [ ] Update production docs [README + /docs reflect new features]
+- [ ] Tag release [git tag v1.0.0 + push tags]
+
+---
+
+### **PROMOTE**
+- [ ] **PROMOTE** *(section header)*
+
+- [ ] Write launch post [tweet/LinkedIn with demo GIF]
+- [ ] Share on Product Hunt [post + gather 10 upvotes]
+- [ ] Update portfolio [add project link + screenshots]
+
+---
+
+### **RETRO**
+- [ ] **RETRO** *(section header)*
+
+- [ ] Final review [no console errors + checklist 100% complete]
+- [ ] Ship + announce [posted publicly + link added to README]
+- [ ] Retrospective [document wins + lessons learned in /docs/RETRO.md]
 
 ---
 
