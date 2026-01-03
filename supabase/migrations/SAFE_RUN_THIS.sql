@@ -182,13 +182,13 @@ CREATE POLICY "Users can delete own task labels"
 INSERT INTO checklist_items (id, task_id, text, done, "order")
 SELECT 
   (item->>'id')::uuid as id,
-  tasks.id as task_id,
+  t.id as task_id,
   item->>'text' as text,
   COALESCE((item->>'done')::boolean, false) as done,
   (row_number - 1) as "order"
-FROM tasks,
-  jsonb_array_elements(COALESCE(tasks.checklist, '[]'::jsonb)) WITH ORDINALITY AS arr(item, row_number)
-WHERE jsonb_array_length(COALESCE(tasks.checklist, '[]'::jsonb)) > 0
+FROM tasks t
+CROSS JOIN LATERAL jsonb_array_elements(COALESCE(t.checklist, '[]'::jsonb)) WITH ORDINALITY AS arr(item, row_number)
+WHERE jsonb_array_length(COALESCE(t.checklist, '[]'::jsonb)) > 0
 ON CONFLICT (id) DO NOTHING;
 
 -- Migrate labels (skip duplicates)
@@ -196,23 +196,23 @@ INSERT INTO labels (name, color, user_id)
 SELECT DISTINCT
   item->>'name' as name,
   COALESCE(item->>'color', '#3B82F6') as color,
-  tasks.user_id
-FROM tasks,
-  jsonb_array_elements(COALESCE(tasks.labels, '[]'::jsonb)) AS item
-WHERE jsonb_array_length(COALESCE(tasks.labels, '[]'::jsonb)) > 0
+  t.user_id
+FROM tasks t
+CROSS JOIN LATERAL jsonb_array_elements(COALESCE(t.labels, '[]'::jsonb)) AS item
+WHERE jsonb_array_length(COALESCE(t.labels, '[]'::jsonb)) > 0
 ON CONFLICT (user_id, name) DO NOTHING;
 
 -- Create task_labels relationships (skip duplicates)
 INSERT INTO task_labels (task_id, label_id)
 SELECT DISTINCT
-  tasks.id as task_id,
-  labels.id as label_id
-FROM tasks,
-  jsonb_array_elements(COALESCE(tasks.labels, '[]'::jsonb)) AS item
-  INNER JOIN labels ON 
-    labels.name = item->>'name' 
-    AND labels.user_id = tasks.user_id
-WHERE jsonb_array_length(COALESCE(tasks.labels, '[]'::jsonb)) > 0
+  t.id as task_id,
+  l.id as label_id
+FROM tasks t
+CROSS JOIN LATERAL jsonb_array_elements(COALESCE(t.labels, '[]'::jsonb)) AS item
+INNER JOIN labels l ON 
+  l.name = item->>'name' 
+  AND l.user_id = t.user_id
+WHERE jsonb_array_length(COALESCE(t.labels, '[]'::jsonb)) > 0
 ON CONFLICT (task_id, label_id) DO NOTHING;
 
 -- ============================================================================
