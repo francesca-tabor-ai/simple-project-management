@@ -3,6 +3,13 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { type Task, type Label } from '@/lib/task-types'
 import { updateTask, deleteTask } from '@/app/actions/tasks'
+import { 
+  getChecklistItems, 
+  addChecklistItem, 
+  toggleChecklistItem, 
+  deleteChecklistItem,
+  type ChecklistItem 
+} from '@/app/actions/checklist'
 import { type ActionMeta } from '@/hooks/useUndoableState'
 import { useAutosave } from '@/hooks/useAutosave'
 import { useCalendarSync } from '@/hooks/useCalendarSync'
@@ -30,6 +37,8 @@ const AVAILABLE_USERS = [
 export default function TaskDetailsDrawer({ task, onClose, onTaskUpdate }: TaskDetailsDrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null)
   const [localTask, setLocalTask] = useState<Task | null>(task)
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([])
+  const [loadingChecklist, setLoadingChecklist] = useState(false)
   const [newChecklistItem, setNewChecklistItem] = useState('')
   const [newLabel, setNewLabel] = useState('')
   const [newLabelColor, setNewLabelColor] = useState<string>('')
@@ -42,6 +51,31 @@ export default function TaskDetailsDrawer({ task, onClose, onTaskUpdate }: TaskD
   useEffect(() => {
     setLocalTask(task)
   }, [task])
+
+  // Load checklist items from database when task changes
+  useEffect(() => {
+    if (!task?.id) {
+      setChecklistItems([])
+      return
+    }
+
+    const loadChecklist = async () => {
+      setLoadingChecklist(true)
+      try {
+        console.log('[TaskDetailsDrawer] Loading checklist for task:', task.id)
+        const items = await getChecklistItems(task.id)
+        setChecklistItems(items)
+        console.log('[TaskDetailsDrawer] Loaded', items.length, 'checklist items')
+      } catch (error) {
+        console.error('[TaskDetailsDrawer] Failed to load checklist:', error)
+        setChecklistItems([])
+      } finally {
+        setLoadingChecklist(false)
+      }
+    }
+
+    loadChecklist()
+  }, [task?.id])
 
   // Close on Escape key
   useEffect(() => {
@@ -163,39 +197,82 @@ export default function TaskDetailsDrawer({ task, onClose, onTaskUpdate }: TaskD
   }
 
   const handleAddChecklistItem = async () => {
-    if (!newChecklistItem.trim()) return
-    const newItem = {
-      id: crypto.randomUUID(),
-      text: newChecklistItem.trim(),
-      done: false,
-    }
-    // Immutable update - create new array
-    const updatedChecklist = [...localTask.checklist, newItem]
-    handleUpdate({ checklist: updatedChecklist })
-    setNewChecklistItem('')
+    if (!newChecklistItem.trim() || !task) return
     
-    // Flush immediately for discrete checklist actions (don't wait for 400ms debounce)
-    await flushSave()
+    const textToAdd = newChecklistItem.trim()
+    setNewChecklistItem('') // Clear input immediately for better UX
+    
+    // Optimistic update
+    const tempItem: ChecklistItem = {
+      id: `temp-${Date.now()}`,
+      task_id: task.id,
+      text: textToAdd,
+      done: false,
+      order: checklistItems.length
+    }
+    setChecklistItems(prev => [...prev, tempItem])
+    
+    try {
+      console.log('[TaskDetailsDrawer] Adding checklist item:', textToAdd)
+      const newItem = await addChecklistItem(task.id, textToAdd)
+      
+      if (newItem) {
+        // Replace temp item with real item from database
+        setChecklistItems(prev => 
+          prev.map(item => item.id === tempItem.id ? newItem : item)
+        )
+        console.log('[TaskDetailsDrawer] Successfully added checklist item')
+      }
+    } catch (error) {
+      console.error('[TaskDetailsDrawer] Failed to add checklist item:', error)
+      // Revert optimistic update
+      setChecklistItems(prev => prev.filter(item => item.id !== tempItem.id))
+      alert('Failed to add checklist item. Please try again.')
+    }
   }
 
   const handleToggleChecklistItem = async (itemId: string) => {
-    // Immutable update - create new array and new item objects
-    const updated = localTask.checklist.map(item =>
-      item.id === itemId ? { ...item, done: !item.done } : item
-    )
-    handleUpdate({ checklist: updated })
+    const item = checklistItems.find(i => i.id === itemId)
+    if (!item) return
     
-    // Flush immediately for discrete actions
-    await flushSave()
+    const newDoneState = !item.done
+    
+    // Optimistic update
+    setChecklistItems(prev =>
+      prev.map(i => i.id === itemId ? { ...i, done: newDoneState } : i)
+    )
+    
+    try {
+      console.log('[TaskDetailsDrawer] Toggling checklist item:', itemId, 'to', newDoneState)
+      await toggleChecklistItem(itemId, newDoneState)
+      console.log('[TaskDetailsDrawer] Successfully toggled checklist item')
+    } catch (error) {
+      console.error('[TaskDetailsDrawer] Failed to toggle checklist item:', error)
+      // Revert optimistic update
+      setChecklistItems(prev =>
+        prev.map(i => i.id === itemId ? { ...i, done: !newDoneState } : i)
+      )
+      alert('Failed to update checklist item. Please try again.')
+    }
   }
 
   const handleDeleteChecklistItem = async (itemId: string) => {
-    // Immutable update - create new array via filter
-    const updatedChecklist = localTask.checklist.filter(item => item.id !== itemId)
-    handleUpdate({ checklist: updatedChecklist })
+    // Optimistic update
+    const itemToDelete = checklistItems.find(i => i.id === itemId)
+    setChecklistItems(prev => prev.filter(item => item.id !== itemId))
     
-    // Flush immediately for discrete actions
-    await flushSave()
+    try {
+      console.log('[TaskDetailsDrawer] Deleting checklist item:', itemId)
+      await deleteChecklistItem(itemId)
+      console.log('[TaskDetailsDrawer] Successfully deleted checklist item')
+    } catch (error) {
+      console.error('[TaskDetailsDrawer] Failed to delete checklist item:', error)
+      // Revert optimistic update
+      if (itemToDelete) {
+        setChecklistItems(prev => [...prev, itemToDelete].sort((a, b) => a.order - b.order))
+      }
+      alert('Failed to delete checklist item. Please try again.')
+    }
   }
 
   const handleAddLabel = () => {
@@ -256,8 +333,8 @@ export default function TaskDetailsDrawer({ task, onClose, onTaskUpdate }: TaskD
     handleUpdate({ attachments: localTask.attachments.filter(a => a.id !== attachmentId) })
   }
 
-  const completedCount = localTask.checklist.filter(item => item.done).length
-  const totalCount = localTask.checklist.length
+  const completedCount = checklistItems.filter(item => item.done).length
+  const totalCount = checklistItems.length
   const checklistProgress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0
 
   const statusLabels = {
@@ -520,26 +597,32 @@ export default function TaskDetailsDrawer({ task, onClose, onTaskUpdate }: TaskD
               </div>
             )}
             <div className="space-y-2 mb-3">
-              {localTask.checklist.map(item => (
-                <div key={item.id} className="flex items-center gap-2 group">
-                  <input
-                    type="checkbox"
-                    checked={item.done}
-                    onChange={() => handleToggleChecklistItem(item.id)}
-                    className="w-5 h-5 rounded-md border-2 border-gray-300 text-primary focus:ring-2 focus:ring-primary cursor-pointer"
-                  />
-                  <span className={`flex-1 text-sm ${item.done ? 'line-through text-gray-400' : 'text-gray-800'}`}>
-                    {item.text}
-                  </span>
-                  <button
-                    onClick={() => handleDeleteChecklistItem(item.id)}
-                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
-                    aria-label="Delete checklist item"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
+              {loadingChecklist ? (
+                <div className="text-sm text-gray-500 py-2">Loading checklist...</div>
+              ) : checklistItems.length === 0 ? (
+                <div className="text-sm text-gray-400 py-2">No checklist items yet</div>
+              ) : (
+                checklistItems.map(item => (
+                  <div key={item.id} className="flex items-center gap-2 group">
+                    <input
+                      type="checkbox"
+                      checked={item.done}
+                      onChange={() => handleToggleChecklistItem(item.id)}
+                      className="w-5 h-5 rounded-md border-2 border-gray-300 text-primary focus:ring-2 focus:ring-primary cursor-pointer"
+                    />
+                    <span className={`flex-1 text-sm ${item.done ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                      {item.text}
+                    </span>
+                    <button
+                      onClick={() => handleDeleteChecklistItem(item.id)}
+                      className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
+                      aria-label="Delete checklist item"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
             <div className="flex gap-2">
               <input
