@@ -129,33 +129,33 @@ BEGIN
   INSERT INTO checklist_items (task_id, text, done, "order")
   SELECT 
     t.id,
-    (item->>'text')::text,
-    COALESCE((item->>'done')::boolean, false),
-    ROW_NUMBER() OVER (PARTITION BY t.id ORDER BY ordinality) - 1
+    (item_value->>'text')::text,
+    COALESCE((item_value->>'done')::boolean, false),
+    (ordinality - 1)::integer
   FROM tasks t
-  CROSS JOIN LATERAL jsonb_array_elements(COALESCE(t.checklist, '[]'::jsonb)) WITH ORDINALITY AS item
+  CROSS JOIN LATERAL jsonb_array_elements(COALESCE(t.checklist, '[]'::jsonb)) WITH ORDINALITY AS item(item_value, ordinality)
   WHERE jsonb_array_length(COALESCE(t.checklist, '[]'::jsonb)) > 0
   ON CONFLICT (id) DO NOTHING;
 
   INSERT INTO labels (id, user_id, name, color)
   SELECT DISTINCT
-    (label->>'id')::uuid,
+    (label_value->>'id')::uuid,
     t.user_id,
-    (label->>'name')::text,
-    COALESCE((label->>'color')::text, '#3B82F6')
+    (label_value->>'name')::text,
+    COALESCE((label_value->>'color')::text, '#3B82F6')
   FROM tasks t
-  CROSS JOIN LATERAL jsonb_array_elements(COALESCE(t.labels, '[]'::jsonb)) AS label
+  CROSS JOIN LATERAL jsonb_array_elements(COALESCE(t.labels, '[]'::jsonb)) AS label(label_value)
   WHERE jsonb_array_length(COALESCE(t.labels, '[]'::jsonb)) > 0
   ON CONFLICT (user_id, name) DO UPDATE SET color = EXCLUDED.color;
 
   INSERT INTO task_labels (task_id, label_id)
   SELECT DISTINCT
     t.id,
-    (label->>'id')::uuid
+    (label_value->>'id')::uuid
   FROM tasks t
-  CROSS JOIN LATERAL jsonb_array_elements(COALESCE(t.labels, '[]'::jsonb)) AS label
+  CROSS JOIN LATERAL jsonb_array_elements(COALESCE(t.labels, '[]'::jsonb)) AS label(label_value)
   WHERE jsonb_array_length(COALESCE(t.labels, '[]'::jsonb)) > 0
-    AND EXISTS (SELECT 1 FROM labels WHERE id = (label->>'id')::uuid)
+    AND EXISTS (SELECT 1 FROM labels WHERE id = (label_value->>'id')::uuid)
   ON CONFLICT (task_id, label_id) DO NOTHING;
 
   RAISE NOTICE '✅ Migrated existing JSONB data';
