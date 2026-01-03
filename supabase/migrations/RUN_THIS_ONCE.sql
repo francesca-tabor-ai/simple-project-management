@@ -167,7 +167,7 @@ CREATE POLICY "Users can delete own task labels" ON task_labels
     )
   );
 
-RAISE NOTICE '✓ Normalized tables created with RLS policies';
+-- Progress: Normalized tables created with RLS policies ✓
 
 -- ============================================================================
 -- PART 2: Migrate Existing JSONB Data (if any)
@@ -209,7 +209,7 @@ WHERE jsonb_array_length(COALESCE(t.labels, '[]'::jsonb)) > 0
   AND EXISTS (SELECT 1 FROM labels WHERE id = (label->>'id')::uuid)
 ON CONFLICT (task_id, label_id) DO NOTHING;
 
-RAISE NOTICE '✓ Migrated existing JSONB data to normalized tables';
+-- Progress: Migrated existing JSONB data to normalized tables ✓
 
 -- ============================================================================
 -- PART 3: Insert Test Data (from TEST_DATA.sql)
